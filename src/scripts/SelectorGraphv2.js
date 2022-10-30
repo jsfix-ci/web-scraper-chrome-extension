@@ -1,227 +1,243 @@
 import * as d3 from 'd3';
 
 export default class SelectorGraphv2 {
-	constructor(sitemap) {
-		this.sitemap = sitemap;
+ constructor(sitemap) {
+  this.sitemap = sitemap;
 
-		/**
-		 * function for line drawing between two nodes
-		 */
-		this.diagonal = d3.svg.diagonal().projection(function (d) {
-			return [d.y, d.x];
-		});
-	}
+  /**
+   * function for line drawing between two nodes
+   */
+  this.diagonal = d3.svg.diagonal().projection(function (d) {
+   return [d.y, d.x];
+  });
+ }
 
-	/**
-	 * Inits d3.layout.tree
-	 */
-	initTree(w, h) {
-		this.tree = d3.layout.tree().size([h, w]);
-		this.tree.children(this.getSelectorVisibleChildren.bind(this));
-	}
+ /**
+  * Inits d3.layout.tree
+  */
+ initTree(w, h) {
+  this.tree = d3.tree().size([h, w]);
+  this.tree.children(this.getSelectorVisibleChildren.bind(this));
+ }
 
-	getSelectorChildren(parentSelector) {
-		if (parentSelector.childSelectors === undefined) {
-			parentSelector.childSelectors = this.sitemap.selectors
-				.getDirectChildSelectors(parentSelector.uuid)
-				.fullClone();
-		}
+ getSelectorChildren(parentSelector) {
+  if (parentSelector.childSelectors === undefined) {
+   parentSelector.childSelectors = this.sitemap.selectors
+    .getDirectChildSelectors(parentSelector.uuid)
+    .fullClone();
+  }
 
-		if (parentSelector.childSelectors.length === 0) {
-			return null;
-		}
-		return parentSelector.childSelectors;
-	}
+  if (parentSelector.childSelectors.length === 0) {
+   return null;
+  }
+  return parentSelector.childSelectors;
+ }
 
-	getSelectorVisibleChildren(parentSelector) {
-		// initially hide selector children
-		if (parentSelector.visibleChildren === undefined) {
-			parentSelector.visibleChildren = false;
-		}
+ getSelectorVisibleChildren(parentSelector) {
+  // initially hide selector children
+  if (parentSelector.visibleChildren === undefined) {
+   parentSelector.visibleChildren = false;
+  }
 
-		if (parentSelector.visibleChildren === false) {
-			return null;
-		}
+  if (parentSelector.visibleChildren === false) {
+   return null;
+  }
 
-		return this.getSelectorChildren(parentSelector);
-	}
+  return this.getSelectorChildren(parentSelector);
+ }
 
-	selectorHasChildren(parentSelector) {
-		const children = this.sitemap.selectors.getDirectChildSelectors(parentSelector.uuid);
-		const selectorHasChildren = children.length > 0;
-		return selectorHasChildren;
-	}
+ selectorHasChildren(parentSelector) {
+  const children = this.sitemap.selectors.getDirectChildSelectors(parentSelector.uuid);
+  const selectorHasChildren = children.length > 0;
+  return selectorHasChildren;
+ }
 
-	draw(element, w, h) {
-		const m = [20, 120, 20, 120];
-		var w = w - m[1] - m[3];
-		var h = h - m[0] - m[2];
-		const i = 0;
-		let root;
-		let selectorList;
+ draw(element, w, h) {
+  const m = [20, 120, 20, 120];
+  var w = w - m[1] - m[3];
+  var h = h - m[0] - m[2];
+  const i = 0;
+  let root;
+  let selectorList;
 
-		this.initTree(w, h);
+  this.initTree(w, h);
 
-		// @TODO use element
-		this.svg = d3
-			.select(element)
-			.append('svg:svg')
-			.attr('width', w + m[1] + m[3])
-			.attr('height', h + m[0] + m[2])
-			.append('svg:g')
-			.attr('transform', `translate(${m[3]},${m[0]})`);
+  // @TODO use element
+  this.svg = d3
+   .select(element).insert('svg:svg')
+   .attr('width', w + m[1] + m[3])
+   .attr('height', h + m[0] + m[2]).insert('svg:g')
+   .attr('transform', `translate(${m[3]},${m[0]})`);
 
-		this.root = {
-			id: '_root',
-			uuid: '0',
-			x0: h / 2,
-			y0: 0,
-			i: '_root',
-		};
+  this.root = {
+   id: '_root',
+   uuid: '0',
+   x0: h / 2,
+   y0: 0,
+   i: '_root',
+  };
 
-		this.update(this.root);
-	}
+  this.update(this.root);
+ }
 
-	/**
-	 * Color for selectors circle
-	 * @param selector
-	 */
-	getNodeColor(selector) {
-		if (this.selectorHasChildren(selector) && !selector.visibleChildren) {
-			return 'lightsteelblue';
-		}
-		return '#fff';
-	}
+ /**
+  * Color for selectors circle
+  * @param selector
+  */
+ getNodeColor(selector) {
+  if (this.selectorHasChildren(selector) && !selector.visibleChildren) {
+   return 'lightsteelblue';
+  }
+  return '#fff';
+ }
 
-	update(source) {
-		const duration = 500;
+ update(source) {
+  const duration = 500;
 
-		// Compute the new tree layout.
-		const nodes = this.tree.nodes(this.root).reverse();
+  // Compute the new tree layout.
+  const nodes = this.tree.nodes(this.root).reverse();
 
-		// Normalize for fixed-depth.
-		nodes.forEach(function (d) {
-			d.y = d.depth * 100;
-		});
-		const i = 0;
-		// Update the nodes…
-		const node = this.svg.selectAll('g.node').data(nodes, function (d) {
-			if (d.i === undefined) {
-				d.i = d.uuid;
-				d.i = `${source.i}/${d.i}`;
-			}
-			return d.i;
-		});
+  // Normalize for fixed-depth.
+  nodes.forEach(function (d) {
+   d.y = d.depth * 100;
+  });
+  const i = 0;
+  // Update the nodes…
+  const node = /* TODO: JSFIX could not patch the breaking change:
+  The selection.sort and selection.data methods now return new selections rather than modifying the selection in-place. 
+  Suggested fix: This is only breaking if you are calling .data() outside of a declaration. In that case you would have to change the reference of the selection variable.
+  For instance if you have:
+   `const selection = d3.select("body").append("table").selectAll("tr");
+   selection.data(matrix);`
+  then you would now need something like
+   `let selection = d3.select("body").append("table").selectAll("tr");
+   selection = selection.data(matrix);`
+  The same goes for `.sort()` method calls. */
+  this.svg.selectAll('g.node').data(nodes, function (d) {
+   if (d.i === undefined) {
+    d.i = d.uuid;
+    d.i = `${source.i}/${d.i}`;
+   }
+   return d.i;
+  });
 
-		// Enter any new nodes at the parent's previous position.
-		const nodeEnter = node
-			.enter()
-			.append('svg:g')
-			.attr('class', 'node')
-			.attr('transform', function (d) {
-				return `translate(${source.y0},${source.x0})`;
-			})
-			.on(
-				'click',
-				function (d) {
-					this.toggle(d);
-					this.update(d);
-				}.bind(this)
-			);
+  // Enter any new nodes at the parent's previous position.
+  const nodeEnter = node
+   .enter().insert('svg:g')
+   .attr('class', 'node')
+   .attr('transform', function (d) {
+    return `translate(${source.y0},${source.x0})`;
+   })
+   .on(
+    'click',
+    function (d) {
+     this.toggle(d);
+     this.update(d);
+    }.bind(this)
+   );
 
-		nodeEnter.append('svg:circle').attr('r', 1e-6).style('fill', this.getNodeColor.bind(this));
+  nodeEnter.insert('svg:circle').attr('r', 1e-6).style('fill', this.getNodeColor.bind(this));
 
-		nodeEnter
-			.append('svg:text')
-			.attr(
-				'x',
-				function (d) {
-					return this.selectorHasChildren(d) ? -10 : 10;
-				}.bind(this)
-			)
-			.attr('dy', '.35em')
-			.attr(
-				'text-anchor',
-				function (d) {
-					return this.selectorHasChildren(d) ? 'end' : 'start';
-				}.bind(this)
-			)
-			.text(function (d) {
-				return `${d.id} - ${d.uuid}`;
-			})
-			.style('fill-opacity', 1e-6);
+  nodeEnter.insert('svg:text')
+   .attr(
+    'x',
+    function (d) {
+     return this.selectorHasChildren(d) ? -10 : 10;
+    }.bind(this)
+   )
+   .attr('dy', '.35em')
+   .attr(
+    'text-anchor',
+    function (d) {
+     return this.selectorHasChildren(d) ? 'end' : 'start';
+    }.bind(this)
+   )
+   .text(function (d) {
+    return `${d.id} - ${d.uuid}`;
+   })
+   .style('fill-opacity', 1e-6);
 
-		// Transition nodes to their new position.
-		const nodeUpdate = node
-			.transition()
-			.duration(duration)
-			.attr('transform', function (d) {
-				return `translate(${d.y},${d.x})`;
-			});
+  // Transition nodes to their new position.
+  const nodeUpdate = node
+   .transition()
+   .duration(duration)
+   .attr('transform', function (d) {
+    return `translate(${d.y},${d.x})`;
+   });
 
-		nodeUpdate.select('circle').attr('r', 6).style('fill', this.getNodeColor.bind(this));
+  nodeUpdate.select('circle').attr('r', 6).style('fill', this.getNodeColor.bind(this));
 
-		nodeUpdate.select('text').style('fill-opacity', 1);
+  nodeUpdate.select('text').style('fill-opacity', 1);
 
-		// Transition exiting nodes to the parent's new position.
-		const nodeExit = node
-			.exit()
-			.transition()
-			.duration(duration)
-			.attr('transform', function (d) {
-				return `translate(${source.y},${source.x})`;
-			})
-			.remove();
+  // Transition exiting nodes to the parent's new position.
+  const nodeExit = node
+   .exit()
+   .transition()
+   .duration(duration)
+   .attr('transform', function (d) {
+    return `translate(${source.y},${source.x})`;
+   })
+   .remove();
 
-		nodeExit.select('circle').attr('r', 1e-6);
+  nodeExit.select('circle').attr('r', 1e-6);
 
-		nodeExit.select('text').style('fill-opacity', 1e-6);
+  nodeExit.select('text').style('fill-opacity', 1e-6);
 
-		// Update the links…
-		const link = this.svg.selectAll('path.link').data(this.tree.links(nodes), function (d) {
-			return d.target.i;
-		});
+  // Update the links…
+  const link = /* TODO: JSFIX could not patch the breaking change:
+  The selection.sort and selection.data methods now return new selections rather than modifying the selection in-place. 
+  Suggested fix: This is only breaking if you are calling .data() outside of a declaration. In that case you would have to change the reference of the selection variable.
+  For instance if you have:
+   `const selection = d3.select("body").append("table").selectAll("tr");
+   selection.data(matrix);`
+  then you would now need something like
+   `let selection = d3.select("body").append("table").selectAll("tr");
+   selection = selection.data(matrix);`
+  The same goes for `.sort()` method calls. */
+  this.svg.selectAll('path.link').data(this.tree.links(nodes), function (d) {
+   return d.target.i;
+  });
 
-		// Enter any new links at the parent's previous position.
-		link.enter()
-			.insert('svg:path', 'g')
-			.attr('class', 'link')
-			.attr(
-				'd',
-				function (d) {
-					const o = { x: source.x0, y: source.y0 };
-					const res = this.diagonal({ source: o, target: o });
-					return res;
-				}.bind(this)
-			)
-			.transition()
-			.duration(duration)
-			.attr('d', this.diagonal);
+  // Enter any new links at the parent's previous position.
+  link.enter()
+   .insert('svg:path', 'g')
+   .attr('class', 'link')
+   .attr(
+    'd',
+    function (d) {
+     const o = { x: source.x0, y: source.y0 };
+     const res = this.diagonal({ source: o, target: o });
+     return res;
+    }.bind(this)
+   )
+   .transition()
+   .duration(duration)
+   .attr('d', this.diagonal);
 
-		// Transition links to their new position.
-		link.transition().duration(duration).attr('d', this.diagonal);
+  // Transition links to their new position.
+  link.transition().duration(duration).attr('d', this.diagonal);
 
-		// Transition exiting nodes to the parent's new position.
-		link.exit()
-			.transition()
-			.duration(duration)
-			.attr(
-				'd',
-				function (d) {
-					const o = { x: source.x, y: source.y };
-					return this.diagonal({ source: o, target: o });
-				}.bind(this)
-			)
-			.remove();
+  // Transition exiting nodes to the parent's new position.
+  link.exit()
+   .transition()
+   .duration(duration)
+   .attr(
+    'd',
+    function (d) {
+     const o = { x: source.x, y: source.y };
+     return this.diagonal({ source: o, target: o });
+    }.bind(this)
+   )
+   .remove();
 
-		// Stash the old positions for transition.
-		nodes.forEach(function (d) {
-			d.x0 = d.x;
-			d.y0 = d.y;
-		});
-	}
+  // Stash the old positions for transition.
+  nodes.forEach(function (d) {
+   d.x0 = d.x;
+   d.y0 = d.y;
+  });
+ }
 
-	toggle(d) {
-		d.visibleChildren = !d.visibleChildren;
-	}
+ toggle(d) {
+  d.visibleChildren = !d.visibleChildren;
+ }
 }
