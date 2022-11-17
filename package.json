@@ -21,7 +21,7 @@
 		"@babel/runtime": "^7.10.5",
 		"axios": "^0.21.1",
 		"bootstrap": "3.4.1",
-		"d3": "^3.3.8",
+		"d3": "^4.13.0",
 		"icanhaz": "0.10.3",
 		"jquery": "^3.5.0",
 		"jquery-flexdatalist": "^2.2.4",
